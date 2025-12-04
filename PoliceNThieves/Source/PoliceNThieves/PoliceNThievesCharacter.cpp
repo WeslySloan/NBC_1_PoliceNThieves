@@ -96,6 +96,8 @@ void APoliceNThievesCharacter::SetupPlayerInputComponent(UInputComponent* Player
 	{
 		UE_LOG(LogTemplateCharacter, Error, TEXT("'%s' Failed to find an Enhanced Input component! This template is built to use the Enhanced Input system. If you intend to use the legacy system, then you will need to update this C++ file."), *GetNameSafe(this));
 	}
+
+	PlayerInputComponent->BindAction("Attack", IE_Pressed, this, &APoliceNThievesCharacter::Attack);
 }
 
 void APoliceNThievesCharacter::Move(const FInputActionValue& Value)
@@ -142,20 +144,31 @@ void APoliceNThievesCharacter::Attack()
 
 void APoliceNThievesCharacter::ServerAttack_Implementation()
 {
-	// 서버에서 받은 요청을 처리합니다.
-	// 1. 모든 클라이언트에게 애니메이션 재생을 명령합니다.
+	// 1. 서버 콘솔에 로그를 출력하여 요청이 서버에 도착했음을 확인합니다.
+	UE_LOG(LogTemp, Warning, TEXT("SERVER: 클라이언트로부터 공격 요청 받음. 판정 시작!"));
+
+	// 2. 모든 클라이언트에게 애니메이션 재생을 명령합니다.
 	MulticastPlayAttackMontage();
 
-	// 2. (TODO: 여기에 실제로 공격 판정(Hit Trace) 로직을 추가합니다.)
+	// 3. (TODO: 여기에 실제 공격 판정(Hit Trace) 로직을 추가합니다.)
 	// ...
 }
 
 void APoliceNThievesCharacter::MulticastPlayAttackMontage_Implementation()
 {
-	// 모든 클라이언트에서 애니메이션을 재생합니다.
-	// AnimMontage는 블루프린트에서 설정해야 합니다.
-	if (AttackMontage)
+	// 현재 이 코드가 실행되는 곳이 서버인지, 클라이언트인지 구분하여 로그를 출력합니다.
+	if (GetLocalRole() == ROLE_Authority)
 	{
-		PlayAnimMontage(AttackMontage);
+		UE_LOG(LogTemp, Log, TEXT("SERVER & OWNER: 애니메이션 대신 로그 출력 (서버)"));
 	}
+	else
+	{
+		// GetNetMode()를 사용하여 어떤 클라이언트에서 실행 중인지 구분할 수도 있습니다.
+		UE_LOG(LogTemp, Log, TEXT("CLIENT: 애니메이션 대신 로그 출력 (클라이언트)"));
+	}
+
+	// if (AttackMontage)
+	// {
+	//     PlayAnimMontage(AttackMontage); // (TODO: 애니메이션 준비되면 이 코드를 사용)
+	// }
 }
