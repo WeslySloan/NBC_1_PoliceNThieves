@@ -1,4 +1,4 @@
-﻿// APoliceGameMode.h 파일
+﻿// APoliceGameMode.h
 
 #pragma once
 
@@ -14,10 +14,10 @@ class POLICENTHIEVES_API APoliceGameMode : public AGameModeBase
 public:
     APoliceGameMode();
 
-    // 플레이어가 서버에 성공적으로 접속했을 때 호출되는 함수를 오버라이드합니다.
+    // AGameModeBase의 함수를 오버라이드하여 플레이어 접속 시 호출
     virtual void PostLogin(APlayerController* NewPlayer) override;
 
-    // 게임 시작 시 경찰/도둑 역할을 배정하는 함수를 정의합니다. (서버 전용)
+    // 게임 시작 시 경찰/도둑 역할을 배정하는 함수 (서버 전용)
     void AssignRoles();
 
 private:
