@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+ï»¿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #pragma once
 
@@ -70,22 +70,25 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 protected:
-	// 1. °ø°İ Å°¸¦ ´©¸£¸é È£ÃâµÉ ÇÔ¼ö (Private·Î ¼³Á¤ÇØµµ ¹«¹æÇÏ³ª, Protected·Î º¸Åë »ç¿ë)
+	// 1. ê³µê²© í‚¤ë¥¼ ëˆ„ë¥´ë©´ í˜¸ì¶œë  í•¨ìˆ˜ (Privateë¡œ ì„¤ì •í•´ë„ ë¬´ë°©í•˜ë‚˜, Protectedë¡œ ë³´í†µ ì‚¬ìš©)
 	void Attack();
 
-	// 2. ¼­¹ö¿¡°Ô °ø°İÀ» ¿äÃ»ÇÏ´Â RPC (Remote Procedure Call)
-	// Reliable: ÆĞÅ¶ À¯½Ç ¾øÀÌ ¹İµå½Ã ¼­¹ö¿¡ Àü´ŞµÊÀ» º¸Àå (°ø°İ°ú °°Àº Áß¿äÇÑ ¾×¼Ç¿¡ »ç¿ë)
+	// 2. ì„œë²„ì—ê²Œ ê³µê²©ì„ ìš”ì²­í•˜ëŠ” RPC (Remote Procedure Call)
+	// Reliable: íŒ¨í‚· ìœ ì‹¤ ì—†ì´ ë°˜ë“œì‹œ ì„œë²„ì— ì „ë‹¬ë¨ì„ ë³´ì¥ (ê³µê²©ê³¼ ê°™ì€ ì¤‘ìš”í•œ ì•¡ì…˜ì— ì‚¬ìš©)
 	UFUNCTION(Server, Reliable)
 	void ServerAttack();
 
-	// 3. ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡°Ô °ø°İ ¾Ö´Ï¸ŞÀÌ¼ÇÀ» Àç»ıÇÏ¶ó°í ¸í·ÉÇÏ´Â RPC
-	// Unreliable: ¾Ö´Ï¸ŞÀÌ¼ÇÀº ¾à°£ÀÇ ·¢ÀÌ ÀÖ¾îµµ ±¦ÂúÀ¸¹Ç·Î Unreliable·Î ¼³Á¤ÇÏ¿© ³×Æ®¿öÅ© ºÎÇÏ¸¦ ÁÙÀÏ ¼ö ÀÖÀ½
+	// 3. ëª¨ë“  í´ë¼ì´ì–¸íŠ¸ì—ê²Œ ê³µê²© ì• ë‹ˆë©”ì´ì…˜ì„ ì¬ìƒí•˜ë¼ê³  ëª…ë ¹í•˜ëŠ” RPC
+	// Unreliable: ì• ë‹ˆë©”ì´ì…˜ì€ ì•½ê°„ì˜ ë™ì´ ìˆì–´ë„ ê´œì°®ìœ¼ë¯€ë¡œ Unreliableë¡œ ì„¤ì •í•˜ì—¬ ë„¤íŠ¸ì›Œí¬ ë¶€í•˜ë¥¼ ì¤„ì¼ ìˆ˜ ìˆìŒ
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastPlayAttackMontage();
 
 private:
-	// °ø°İ ¾Ö´Ï¸ŞÀÌ¼Ç ¸ùÅ¸ÁÖ¸¦ ´ãÀ» º¯¼ö
+	// ê³µê²© ì• ë‹ˆë©”ì´ì…˜ ëª½íƒ€ì£¼ë¥¼ ë‹´ì„ ë³€ìˆ˜
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay")
 	class UAnimMontage* AttackMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay")
+	float AttackRange;
 };
 

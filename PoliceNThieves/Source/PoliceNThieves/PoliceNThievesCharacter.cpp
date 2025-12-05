@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+ï»¿// Copyright Epic Games, Inc. All Rights Reserved.
 
 #include "PoliceNThievesCharacter.h"
 #include "Engine/LocalPlayer.h"
@@ -10,6 +10,8 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "InputActionValue.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
 
@@ -53,11 +55,13 @@ APoliceNThievesCharacter::APoliceNThievesCharacter()
 	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
 	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
 
-	// ÀÌ Ä³¸¯ÅÍ°¡ ³×Æ®¿öÅ© Åë½ÅÀ» ÇÏ°Ú´Ù°í ¼±¾ğÇÕ´Ï´Ù.
+	// ì´ ìºë¦­í„°ê°€ ë„¤íŠ¸ì›Œí¬ í†µì‹ ì„ í•˜ê² ë‹¤ê³  ì„ ì–¸í•©ë‹ˆë‹¤.
 	bReplicates = true;
 
-	// Ä³¸¯ÅÍÀÇ ¿òÁ÷ÀÓ(°È±â, Á¡ÇÁ µî)À» ÀÚµ¿À¸·Î µ¿±âÈ­ÇÕ´Ï´Ù.
+	// ìºë¦­í„°ì˜ ì›€ì§ì„(ê±·ê¸°, ì í”„ ë“±)ì„ ìë™ìœ¼ë¡œ ë™ê¸°í™”í•©ë‹ˆë‹¤.
 	SetReplicateMovement(true);
+
+	AttackRange = 100.0f; // 100cm
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -138,37 +142,86 @@ void APoliceNThievesCharacter::Look(const FInputActionValue& Value)
 
 void APoliceNThievesCharacter::Attack()
 {
-	// ÀÔ·ÂÀÌ µé¾î¿ÔÀ» ¶§, Å¬¶óÀÌ¾ğÆ®´Â ¹Ù·Î ¼­¹ö¿¡°Ô °ø°İÀ» ¿äÃ»ÇÕ´Ï´Ù.
+	// ì…ë ¥ì´ ë“¤ì–´ì™”ì„ ë•Œ, í´ë¼ì´ì–¸íŠ¸ëŠ” ë°”ë¡œ ì„œë²„ì—ê²Œ ê³µê²©ì„ ìš”ì²­í•©ë‹ˆë‹¤.
 	ServerAttack();
 }
 
 void APoliceNThievesCharacter::ServerAttack_Implementation()
 {
-	// 1. ¼­¹ö ÄÜ¼Ö¿¡ ·Î±×¸¦ Ãâ·ÂÇÏ¿© ¿äÃ»ÀÌ ¼­¹ö¿¡ µµÂøÇßÀ½À» È®ÀÎÇÕ´Ï´Ù.
-	UE_LOG(LogTemp, Warning, TEXT("SERVER: Å¬¶óÀÌ¾ğÆ®·ÎºÎÅÍ °ø°İ ¿äÃ» ¹ŞÀ½. ÆÇÁ¤ ½ÃÀÛ!"));
+	// 1. í•„ìš”í•œ ë³€ìˆ˜ ì„ ì–¸ ë° ì´ˆê¸°í™” (ë§¨ ìœ„ë¡œ ì´ë™)
+	FHitResult HitResult;
+	FVector StartLocation = GetActorLocation();
+	FVector EndLocation = StartLocation + GetActorForwardVector() * AttackRange;
 
-	// 2. ¸ğµç Å¬¶óÀÌ¾ğÆ®¿¡°Ô ¾Ö´Ï¸ŞÀÌ¼Ç Àç»ıÀ» ¸í·ÉÇÕ´Ï´Ù.
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this); // Traceê°€ ìê¸° ìì‹ ì„ ë¬´ì‹œí•˜ë„ë¡ ì„¤ì •
+
+	// 2. ê³µê²© íŒì • ì‹¤í–‰ (Line Trace)
+	// LineTraceSingleByChannel í•¨ìˆ˜ëŠ” ì„±ê³µ ì‹œ true, ì‹¤íŒ¨ ì‹œ falseë¥¼ ë°˜í™˜í•˜ë©°, 
+	// ì´ ê²°ê³¼ë¥¼ bHitì— ì €ì¥í•©ë‹ˆë‹¤.
+	bool bHit = GetWorld()->LineTraceSingleByChannel(
+		HitResult,
+		StartLocation,
+		EndLocation,
+		ECC_Pawn, // ì¶©ëŒ ì±„ë„ì€ Pawn (ìºë¦­í„°)ë¥¼ ì‚¬ìš©í•©ë‹ˆë‹¤.
+		Params
+	);
+
+	// 3. ì• ë‹ˆë©”ì´ì…˜ ë™ê¸°í™”
 	MulticastPlayAttackMontage();
 
-	// 3. (TODO: ¿©±â¿¡ ½ÇÁ¦ °ø°İ ÆÇÁ¤(Hit Trace) ·ÎÁ÷À» Ãß°¡ÇÕ´Ï´Ù.)
-	// ...
+	// =======================================================
+	// [ê³µê²© íŒì • ë° ê²°ê³¼ ì²˜ë¦¬] - ì˜¤ì§ ì„œë²„ì—ì„œë§Œ ì‹¤í–‰ë©ë‹ˆë‹¤.
+	// =======================================================
+
+	// 4. ë””ë²„ê·¸ ë¼ì¸ ì¶œë ¥ (bHit ê°’ì´ ê²°ì •ëœ í›„ì— í˜¸ì¶œë˜ì–´ì•¼ í•¨)
+	DrawDebugLine(
+		GetWorld(),
+		StartLocation,
+		EndLocation,
+		bHit ? FColor::Red : FColor::Green, // bHit ê°’ì— ë”°ë¼ ìƒ‰ìƒ ê²°ì •
+		false,
+		3.0f,
+		0,
+		5.0f
+	);
+
+	if (bHit)
+	{
+		AActor* HitActor = HitResult.GetActor();
+		APoliceNThievesCharacter* HitCharacter = Cast<APoliceNThievesCharacter>(HitActor);
+
+		if (HitCharacter)
+		{
+			// ë¡œê·¸ë¥¼ í†µí•´ ê³µê²©ì´ ë‹¤ë¥¸ ìºë¦­í„°ì— ëª…ì¤‘í–ˆëŠ”ì§€ í™•ì¸í•©ë‹ˆë‹¤.
+			UE_LOG(LogTemp, Warning, TEXT("SERVER HIT: ë‹¤ë¥¸ ìºë¦­í„° ëª…ì¤‘! ì´ë¦„: %s"), *HitActor->GetName());
+
+			// TODO: ì—¬ê¸°ì— ê²Œì„ ê·œì¹™ì— ë”°ë¥¸ ë¡œì§ì„ í˜¸ì¶œí•©ë‹ˆë‹¤. (ì˜ˆ: ì²´í¬, ëª©ìˆ¨ ì°¨ê°)
+			// UGameplayStatics::ApplyDamage(HitActor, 10.0f, GetController(), this, UDamageType::StaticClass());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("SERVER: ê³µê²© ë¹—ë‚˜ê°."));
+	}
+	// =======================================================
 }
 
 void APoliceNThievesCharacter::MulticastPlayAttackMontage_Implementation()
 {
-	// ÇöÀç ÀÌ ÄÚµå°¡ ½ÇÇàµÇ´Â °÷ÀÌ ¼­¹öÀÎÁö, Å¬¶óÀÌ¾ğÆ®ÀÎÁö ±¸ºĞÇÏ¿© ·Î±×¸¦ Ãâ·ÂÇÕ´Ï´Ù.
+	// í˜„ì¬ ì´ ì½”ë“œê°€ ì‹¤í–‰ë˜ëŠ” ê³³ì´ ì„œë²„ì¸ì§€, í´ë¼ì´ì–¸íŠ¸ì¸ì§€ êµ¬ë¶„í•˜ì—¬ ë¡œê·¸ë¥¼ ì¶œë ¥í•©ë‹ˆë‹¤.
 	if (GetLocalRole() == ROLE_Authority)
 	{
-		UE_LOG(LogTemp, Log, TEXT("SERVER & OWNER: ¾Ö´Ï¸ŞÀÌ¼Ç ´ë½Å ·Î±× Ãâ·Â (¼­¹ö)"));
+		UE_LOG(LogTemp, Log, TEXT("SERVER & OWNER: ì• ë‹ˆë©”ì´ì…˜ ëŒ€ì‹  ë¡œê·¸ ì¶œë ¥ (ì„œë²„)"));
 	}
 	else
 	{
-		// GetNetMode()¸¦ »ç¿ëÇÏ¿© ¾î¶² Å¬¶óÀÌ¾ğÆ®¿¡¼­ ½ÇÇà ÁßÀÎÁö ±¸ºĞÇÒ ¼öµµ ÀÖ½À´Ï´Ù.
-		UE_LOG(LogTemp, Log, TEXT("CLIENT: ¾Ö´Ï¸ŞÀÌ¼Ç ´ë½Å ·Î±× Ãâ·Â (Å¬¶óÀÌ¾ğÆ®)"));
+		// GetNetMode()ë¥¼ ì‚¬ìš©í•˜ì—¬ ì–´ë–¤ í´ë¼ì´ì–¸íŠ¸ì—ì„œ ì‹¤í–‰ ì¤‘ì¸ì§€ êµ¬ë¶„í•  ìˆ˜ë„ ìˆìŠµë‹ˆë‹¤.
+		UE_LOG(LogTemp, Log, TEXT("CLIENT: ì• ë‹ˆë©”ì´ì…˜ ëŒ€ì‹  ë¡œê·¸ ì¶œë ¥ (í´ë¼ì´ì–¸íŠ¸)"));
 	}
 
 	// if (AttackMontage)
 	// {
-	//     PlayAnimMontage(AttackMontage); // (TODO: ¾Ö´Ï¸ŞÀÌ¼Ç ÁØºñµÇ¸é ÀÌ ÄÚµå¸¦ »ç¿ë)
+	//     PlayAnimMontage(AttackMontage); // (TODO: ì• ë‹ˆë©”ì´ì…˜ ì¤€ë¹„ë˜ë©´ ì´ ì½”ë“œë¥¼ ì‚¬ìš©)
 	// }
 }
